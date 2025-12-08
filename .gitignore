@@ -1,0 +1,15 @@
+# Ignore models
+*.pkl
+
+# Ignore database file
+*.db
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Streamlit temp files
+.streamlit/
+
+# OS files
+.DS_Store
