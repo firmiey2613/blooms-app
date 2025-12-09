@@ -170,7 +170,7 @@ def submit_word(word, level, user_id):
 # ============================================
 # STREAMLIT UI
 # ============================================
-st.title("🌿 Bloom’s Hybrid Indicator System")
+st.title("🌿 Bloom’s Hybrid Indicator")
 
 # USER LOGIN SECTION
 st.sidebar.header("User Login")
@@ -291,3 +291,4 @@ elif choice == "Bloom’s Taxonomy Level":
             st.session_state.level_page = "evaluate"
         if col6.button("Create", key="create"):
             st.session_state.level_page = "create"
+
