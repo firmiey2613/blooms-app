@@ -295,5 +295,3 @@ elif choice == "Bloom’s Taxonomy Level":
         st.subheader(f"✨ Verbs under {level.capitalize()}")
         verbs = get_similar_verbs(level)
         display_verbs_table(verbs, cols=3)
-
-
