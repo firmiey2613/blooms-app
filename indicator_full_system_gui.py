@@ -170,7 +170,7 @@ def submit_word(word, level, user_id):
 # ============================================
 # STREAMLIT UI
 # ============================================
-st.title("🌿 Bloom’s Hybrid Indicator")
+st.title("🌿 Bloom’s Hybrid Indicator System")
 
 # USER LOGIN SECTION
 st.sidebar.header("User Login")
@@ -258,7 +258,7 @@ elif choice == "Check / Submit Word":
             st.session_state.checked_word = None
 
 # --------------------------------------------------
-# MODE 3: Browse Levels
+# MODE 3: Browse Levels (Box Layout)
 # --------------------------------------------------
 elif choice == "Bloom’s Taxonomy Level":
     st.header("📚 Browse Bloom Levels")
@@ -272,14 +272,22 @@ elif choice == "Bloom’s Taxonomy Level":
         display_verbs_table(verbs, cols=3)
 
         if st.button("🔙 Return to Levels"):
-            st.session_state.level_page = None  # Reset to show main level selection
+            st.session_state.level_page = None  # Reset to show main level buttons
 
-    # Else, show main Bloom level selection
+    # Else, show main Bloom level buttons in boxes
     else:
-        level_choice = st.radio(
-            "Select a Bloom's Taxonomy Level:",
-            ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
-        )
+        col1, col2, col3 = st.columns(3)
+        col4, col5, col6 = st.columns(3)
 
-        if level_choice:
-            st.session_state.level_page = level_choice.lower()
+        if col1.button("Remember", key="remember"):
+            st.session_state.level_page = "remember"
+        if col2.button("Understand", key="understand"):
+            st.session_state.level_page = "understand"
+        if col3.button("Apply", key="apply"):
+            st.session_state.level_page = "apply"
+        if col4.button("Analyze", key="analyze"):
+            st.session_state.level_page = "analyze"
+        if col5.button("Evaluate", key="evaluate"):
+            st.session_state.level_page = "evaluate"
+        if col6.button("Create", key="create"):
+            st.session_state.level_page = "create"
