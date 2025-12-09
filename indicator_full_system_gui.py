@@ -170,7 +170,7 @@ def submit_word(word, level, user_id):
 # ============================================
 # STREAMLIT UI
 # ============================================
-st.title("🌿 Bloom’s Hybrid Indicator System")
+st.title("🌿 Bloom’s Hybrid Indicator")
 
 # USER LOGIN SECTION
 st.sidebar.header("User Login")
@@ -272,22 +272,14 @@ elif choice == "Bloom’s Taxonomy Level":
         display_verbs_table(verbs, cols=3)
 
         if st.button("🔙 Return to Levels"):
-            st.session_state.level_page = None  # Reset to show main level buttons
+            st.session_state.level_page = None  # Reset to show main level selection
 
-    # Else, show main Bloom level buttons
+    # Else, show main Bloom level selection
     else:
-        col1, col2, col3 = st.columns(3)
-        col4, col5, col6 = st.columns(3)
+        level_choice = st.radio(
+            "Select a Bloom's Taxonomy Level:",
+            ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
+        )
 
-        if col1.button("Remember"):
-            st.session_state.level_page = "remember"
-        elif col2.button("Understand"):
-            st.session_state.level_page = "understand"
-        elif col3.button("Apply"):
-            st.session_state.level_page = "apply"
-        elif col4.button("Analyze"):
-            st.session_state.level_page = "analyze"
-        elif col5.button("Evaluate"):
-            st.session_state.level_page = "evaluate"
-        elif col6.button("Create"):
-            st.session_state.level_page = "create"
+        if level_choice:
+            st.session_state.level_page = level_choice.lower()
