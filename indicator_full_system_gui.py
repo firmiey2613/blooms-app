@@ -5,7 +5,7 @@ import joblib
 import pandas as pd
 
 # ============================================
-# INITIALIZE SESSION STATE (Fix UI glitches)
+# INITIALIZE SESSION STATE
 # ============================================
 if "suggestion" not in st.session_state:
     st.session_state.suggestion = None
@@ -14,99 +14,94 @@ if "checked_word" not in st.session_state:
 if "selected_level" not in st.session_state:
     st.session_state.selected_level = "remember"
 
-# -------------------------------------------
+# ============================================
 # LOAD MODELS
-# -------------------------------------------
+# ============================================
 model = joblib.load("bloom_model.pkl")
 vectorizer = joblib.load("tfidf_vectorizer.pkl")
 
-# -------------------------------------------
-# LOAD BLOOM VERBS CSV
-# -------------------------------------------
+# ============================================
+# LOAD BLOOM VERBS DATA
+# ============================================
 bloom_df = pd.read_csv("bloom_verbs.csv")
 bloom_df['verb'] = bloom_df['verb'].astype(str).str.strip()
 bloom_df['bloom_level'] = bloom_df['bloom_level'].astype(str).str.strip()
 bloom_df = bloom_df[bloom_df['verb'] != ""]
 bloom_df = bloom_df[bloom_df['bloom_level'] != ""]
 
-# -------------------------------------------
-# FUNCTION TO GET SIMILAR VERBS
-# -------------------------------------------
 def get_similar_verbs(level):
-    level_clean = level.strip().lower()
-    verbs = bloom_df[bloom_df['bloom_level'].str.lower() == level_clean]['verb'].tolist()
+    level = level.strip().lower()
+    verbs = bloom_df[bloom_df['bloom_level'].str.lower() == level]['verb'].tolist()
     return verbs
 
-# -------------------------------------------
-# FUNCTION TO DISPLAY VERBS IN TABLE (UPDATED)
-# -------------------------------------------
 def display_verbs_table(verbs, cols=3):
     rows = [verbs[i:i+cols] for i in range(0, len(verbs), cols)]
     df = pd.DataFrame(rows)
     df = df.fillna("")
-
-    # Unique but visually empty column names
     df.columns = ["verbs"] + [" " * (i+1) for i in range(df.shape[1] - 1)]
-
     st.dataframe(df, hide_index=True, use_container_width=True)
 
-
-# -------------------------------------------
-# CONNECT TO DATABASE
-# -------------------------------------------
+# ============================================
+# DATABASE SETUP
+# ============================================
 conn = sqlite3.connect("bloom_indicator.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# -------------------------------------------
-# PREDICT BLOOM LEVEL FOR QUESTION
-# -------------------------------------------
+# Create all required tables
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS bloom_words (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    word TEXT,
+    suggested_level TEXT,
+    vote_count INTEGER DEFAULT 0,
+    approved INTEGER DEFAULT 0,
+    created_at TEXT
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    word_id INTEGER,
+    UNIQUE(user_id, word_id)
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS questions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    question_text TEXT,
+    predicted_level TEXT,
+    created_at TEXT
+)
+""")
+
+conn.commit()
+
+# ============================================
+# PREDICT QUESTION LEVEL
+# ============================================
 def predict_question(question):
     X = vectorizer.transform([question])
     pred = model.predict(X)[0]
     return pred
 
-# -------------------------------------------
-# SUBMIT WORD TO DATABASE
-# -------------------------------------------
-def submit_word(word, level):
-    cursor.execute("""
-        SELECT id, vote_count FROM bloom_words 
-        WHERE word=? AND suggested_level=?
-    """, (word, level))
-    
-    result = cursor.fetchone()
-
-    if result:
-        word_id, vote_count = result
-        vote_count += 1
-        approved = vote_count >= 10
-
-        cursor.execute("""
-            UPDATE bloom_words 
-            SET vote_count=?, approved=? 
-            WHERE id=?
-        """, (vote_count, approved, word_id))
-        conn.commit()
-
-        return f"✅ Updated '{word}' | Level '{level}' | Votes: {vote_count} | Approved: {approved}"
-
-    cursor.execute("""
-        INSERT INTO bloom_words (word, suggested_level, created_at) 
-        VALUES (?, ?, ?)
-    """, (word, level, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-    conn.commit()
-
-    return f"✅ Added new word '{word}' under suggested level '{level}'"
-
-# -------------------------------------------
-# CHECK OR SUGGEST WORD LEVEL
-# -------------------------------------------
+# ============================================
+# CHECK / SUGGEST WORD
+# ============================================
 def check_or_predict_word(word):
     cursor.execute("""
         SELECT suggested_level FROM bloom_words 
         WHERE word=? AND approved=1
     """, (word,))
-    
     result = cursor.fetchone()
 
     if result:
@@ -116,20 +111,94 @@ def check_or_predict_word(word):
     pred = model.predict(X)[0]
     return f"ℹ NLP Suggestion: {pred}"
 
-# -------------------------------------------
+# ============================================
+# SUBMIT / VOTE SYSTEM
+# ============================================
+def submit_word(word, level, user_id):
+
+    if not user_id:
+        return "Please enter your username before voting."
+
+    # Check if the word already exists
+    cursor.execute("""
+        SELECT id, vote_count FROM bloom_words 
+        WHERE word=? AND suggested_level=?
+    """, (word, level))
+    result = cursor.fetchone()
+
+    if result:
+        word_id, vote_count = result
+
+        # Check if user already voted
+        cursor.execute("""
+            SELECT id FROM votes 
+            WHERE user_id=? AND word_id=?
+        """, (user_id, word_id))
+
+        if cursor.fetchone():
+            return "You have already voted for this word."
+
+        # Record a vote
+        cursor.execute("INSERT INTO votes (user_id, word_id) VALUES (?, ?)", (user_id, word_id))
+
+        vote_count += 1
+        approved = 1 if vote_count >= 10 else 0
+
+        cursor.execute("""
+            UPDATE bloom_words
+            SET vote_count=?, approved=?
+            WHERE id=?
+        """, (vote_count, approved, word_id))
+
+        conn.commit()
+
+        if approved:
+            return f"🎉 '{word}' has reached 10 votes and is now APPROVED at level '{level}'."
+
+        return f"✅ Vote recorded. '{word}' now has {vote_count} votes."
+
+    # Word does not exist → create new
+    cursor.execute("""
+        INSERT INTO bloom_words (word, suggested_level, created_at, vote_count)
+        VALUES (?, ?, ?, 1)
+    """, (word, level, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+    cursor.execute("SELECT last_insert_rowid()")
+    word_id = cursor.fetchone()[0]
+
+    cursor.execute("""
+        INSERT INTO votes (user_id, word_id)
+        VALUES (?, ?)
+    """, (user_id, word_id))
+
+    conn.commit()
+    return f"✅ Added '{word}' and recorded your vote."
+
+# ============================================
 # STREAMLIT UI
-# -------------------------------------------
+# ============================================
 st.title("🌿 Bloom’s Hybrid Indicator System")
+
+# USER LOGIN SECTION
+st.sidebar.header("User Login")
+username = st.sidebar.text_input("Enter your username")
+
+if username:
+    cursor.execute("INSERT OR IGNORE INTO users (username) VALUES (?)", (username,))
+    conn.commit()
+    cursor.execute("SELECT id FROM users WHERE username=?", (username,))
+    user_id = cursor.fetchone()[0]
+else:
+    user_id = None
 
 menu = ["Predict Question", "Check / Submit Word", "Bloom’s Taxonomy Level"]
 choice = st.sidebar.selectbox("Select Mode", menu)
 
 # --------------------------------------------------
-# MODE 1: Predict Full Question
+# MODE 1: Predict Question
 # --------------------------------------------------
 if choice == "Predict Question":
     st.header("🔍 Predict Bloom Level for a Question")
-
     question = st.text_area("Enter the full question:")
 
     if st.button("Predict"):
@@ -141,27 +210,21 @@ if choice == "Predict Question":
             if similar_verbs:
                 st.subheader(f"✨ Similar verbs for **{pred}**")
                 display_verbs_table(similar_verbs, cols=3)
-            else:
-                st.info("No verbs found for this level.")
 
             cursor.execute("""
-                INSERT INTO questions (question_text, predicted_level, created_at) 
+                INSERT INTO questions (question_text, predicted_level, created_at)
                 VALUES (?, ?, ?)
             """, (question, pred, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
             conn.commit()
-
-            st.write("💾 Question saved to database.")
-
         else:
             st.warning("Please enter a question.")
 
 # --------------------------------------------------
-# MODE 2: Check, Suggest, Submit Word
+# MODE 2: Check / Submit Word
 # --------------------------------------------------
 elif choice == "Check / Submit Word":
-    st.header("📝 Check or Submit a Word to Bloom Level")
-
-    word = st.text_input("Enter a verb or keyword:", key="input_word")
+    st.header("📝 Check or Submit a Word")
+    word = st.text_input("Enter a verb or keyword:")
 
     if st.button("Check / Suggest"):
         if word.strip():
@@ -171,8 +234,10 @@ elif choice == "Check / Submit Word":
             st.warning("Enter a word first.")
 
     if st.session_state.suggestion:
+
         st.write(st.session_state.suggestion)
 
+        # Extract suggested level
         if "Bloom Level:" in st.session_state.suggestion:
             suggested_level = st.session_state.suggestion.split("Bloom Level:")[1].strip()
         elif "NLP Suggestion:" in st.session_state.suggestion:
@@ -180,16 +245,15 @@ elif choice == "Check / Submit Word":
         else:
             suggested_level = None
 
+        # Show similar verbs
         if suggested_level:
-            similar_verbs = get_similar_verbs(suggested_level)
-            if similar_verbs:
-                st.markdown(f"**Similar verbs for {suggested_level}:**")
-                display_verbs_table(similar_verbs, cols=3)
-            else:
-                st.info("No verbs found for this level.")
+            verbs = get_similar_verbs(suggested_level)
+            if verbs:
+                st.subheader(f"Similar verbs for {suggested_level}")
+                display_verbs_table(verbs, cols=3)
 
         st.markdown("---")
-        st.subheader("📌 Submit / Vote for This Word")
+        st.subheader("📌 Submit / Vote for Word")
 
         level = st.selectbox(
             "Suggested Bloom’s Level:",
@@ -198,18 +262,16 @@ elif choice == "Check / Submit Word":
         )
 
         if st.button("Submit Word"):
-            result = submit_word(st.session_state.checked_word, level)
+            result = submit_word(st.session_state.checked_word, level, user_id)
             st.success(result)
-
             st.session_state.suggestion = None
             st.session_state.checked_word = None
 
 # --------------------------------------------------
-# MODE 3: Browse Bloom’s Taxonomy Levels
+# MODE 3: Browse Levels
 # --------------------------------------------------
 elif choice == "Bloom’s Taxonomy Level":
-    st.header("📚 Browse Bloom’s Taxonomy Levels")
-    st.write("Click a level to view all verbs under it.")
+    st.header("📚 Browse Bloom Levels")
 
     col1, col2, col3 = st.columns(3)
     col4, col5, col6 = st.columns(3)
@@ -230,11 +292,8 @@ elif choice == "Bloom’s Taxonomy Level":
         level = None
 
     if level:
-        st.subheader(f"✨ Verbs under **{level.capitalize()}**")
-
+        st.subheader(f"✨ Verbs under {level.capitalize()}")
         verbs = get_similar_verbs(level)
-        if verbs:
-            display_verbs_table(verbs, cols=3)
-        else:
-            st.info("No verbs found for this level.")
+        display_verbs_table(verbs, cols=3)
+
 
