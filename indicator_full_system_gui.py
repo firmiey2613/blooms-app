@@ -16,6 +16,15 @@ if "selected_level" not in st.session_state:
 if "level_page" not in st.session_state:
     st.session_state.level_page = None  # Track selected Bloom level
 
+# ============================================ # BLOOM LEVEL LABELS # ============================================ 
+LEVEL_LABELS = { 
+    "remember": "Remember (C1)", 
+    "understand": "Understand (C2)", 
+    "apply": "Apply (C3)", 
+    "analyze": "Analyze (C4)", 
+    "evaluate": "Evaluate (C5)", 
+    "create": "Create (C6)" }
+
 # ============================================
 # LOAD MODELS
 # ============================================
@@ -197,7 +206,7 @@ if choice == "Predict Question":
     if st.button("Predict"):
         if question.strip():
             pred = predict_question(question)
-            st.success(f"Predicted Bloom Level: **{pred}**")
+            st.success(f"**{LEVEL_LABELS.get(pred, pred)}**")
 
             similar_verbs = get_similar_verbs(pred)
             if similar_verbs:
@@ -239,7 +248,7 @@ elif choice == "Check / Submit Word":
         if suggested_level:
             verbs = get_similar_verbs(suggested_level)
             if verbs:
-                st.subheader(f"Similar verbs for {suggested_level}")
+                st.subheader(f"Similar verbs for {LEVEL_LABELS.get(suggested_level.lower(), suggested_level)}")
                 display_verbs_table(verbs, cols=3)
 
         st.markdown("---")
@@ -267,7 +276,7 @@ elif choice == "Bloom’s Taxonomy Level":
     if st.session_state.level_page:
 
         level = st.session_state.level_page
-        st.subheader(f"✨ Verbs under {level.capitalize()}")
+        st.subheader(f"✨ Verbs under {LEVEL_LABELS.get(level, level.capitalize())}")
         verbs = get_similar_verbs(level)
         display_verbs_table(verbs, cols=3)
 
@@ -279,16 +288,17 @@ elif choice == "Bloom’s Taxonomy Level":
         col1, col2, col3 = st.columns(3)
         col4, col5, col6 = st.columns(3)
 
-        if col1.button("Remember", key="remember"):
+        if col1.button("Remember (C1)", key="remember"):
             st.session_state.level_page = "remember"
-        if col2.button("Understand", key="understand"):
+        if col2.button("Understand (C2)", key="understand"):
             st.session_state.level_page = "understand"
-        if col3.button("Apply", key="apply"):
+        if col3.button("Apply (C3)", key="apply"):
             st.session_state.level_page = "apply"
-        if col4.button("Analyze", key="analyze"):
+        if col4.button("Analyze (C4)", key="analyze"):
             st.session_state.level_page = "analyze"
-        if col5.button("Evaluate", key="evaluate"):
+        if col5.button("Evaluate (C5)", key="evaluate"):
             st.session_state.level_page = "evaluate"
-        if col6.button("Create", key="create"):
+        if col6.button("Create (C6)", key="create"):
             st.session_state.level_page = "create"
+
 
