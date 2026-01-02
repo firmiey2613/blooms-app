@@ -160,9 +160,9 @@ def submit_word(word, level, user_id):
         conn.commit()
 
         if approved:
-            return f"🎉 '{word}' has reached 10 votes and is now APPROVED at level '{level}'."
+            return f"🎉 '{word}' has reached 10 votes and is now APPROVED at level '{LEVEL_LABELS.get(level, level)}'."
 
-        return f"✅ Vote recorded. '{word}' now has {vote_count} votes."
+        return f"✅ Vote recorded. '{word}' now has {vote_count} votes at level '{LEVEL_LABELS.get(level, level)}'."
 
     cursor.execute("""
         INSERT INTO bloom_words (word, suggested_level, created_at, vote_count)
@@ -174,7 +174,7 @@ def submit_word(word, level, user_id):
 
     cursor.execute("INSERT INTO votes (user_id, word_id) VALUES (?, ?)", (user_id, word_id))
     conn.commit()
-    return f"✅ Added '{word}' and recorded your vote."
+    return f"✅ Added '{word}' and recorded your vote at level '{LEVEL_LABELS.get(level, level)}'."
 
 # ============================================
 # STREAMLIT UI
@@ -300,6 +300,7 @@ elif choice == "Bloom’s Taxonomy Level":
             st.session_state.level_page = "evaluate"
         if col6.button("Create (C6)", key="create"):
             st.session_state.level_page = "create"
+
 
 
 
