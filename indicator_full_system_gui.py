@@ -16,14 +16,15 @@ if "selected_level" not in st.session_state:
 if "level_page" not in st.session_state:
     st.session_state.level_page = None  # Track selected Bloom level
 
-# ============================================ # BLOOM LEVEL LABELS # ============================================ 
-LEVEL_LABELS = { 
-    "remember": "Remember (C1)", 
-    "understand": "Understand (C2)", 
-    "apply": "Apply (C3)", 
-    "analyze": "Analyze (C4)", 
-    "evaluate": "Evaluate (C5)", 
-    "create": "Create (C6)" }
+# ============================================ # BLOOM LEVEL LABELS # ============================================  
+LEVEL_LABELS = {  
+    "remember": "Remember (C1)",  
+    "understand": "Understand (C2)",  
+    "apply": "Apply (C3)",  
+    "analyze": "Analyze (C4)",  
+    "evaluate": "Evaluate (C5)",  
+    "create": "Create (C6)" 
+}
 
 # ============================================
 # LOAD MODELS
@@ -206,8 +207,13 @@ if choice == "Predict Question":
     if st.button("Predict"):
         if question.strip():
             pred = predict_question(question)
-            pred_str = str(pred).strip().lower()
-            display_label = LEVEL_LABELS.get(pred_str, pred)
+            
+            # Clean the prediction and force it to lowercase for the dictionary lookup
+            pred_key = str(pred).strip().lower()
+            
+            # Use the dictionary to get the label, default to original if not found
+            display_label = LEVEL_LABELS.get(pred_key, pred)
+            
             st.success(f"**{display_label}**")
 
             similar_verbs = get_similar_verbs(pred)
@@ -302,6 +308,7 @@ elif choice == "Bloom’s Taxonomy Level":
             st.session_state.level_page = "evaluate"
         if col6.button("Create (C6)", key="create"):
             st.session_state.level_page = "create"
+
 
 
 
