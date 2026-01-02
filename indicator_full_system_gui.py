@@ -207,11 +207,12 @@ if choice == "Predict Question":
         if question.strip():
             pred = predict_question(question)
             pred_str = str(pred).strip().lower()
-            st.success(f"**{LEVEL_LABELS.get(pred_str, pred)}**")
+            display_label = LEVEL_LABELS.get(pred_str, pred)
+            st.success(f"**{display_label}**")
 
             similar_verbs = get_similar_verbs(pred)
             if similar_verbs:
-                st.subheader(f"✨ Similar verbs for **{LEVEL_LABELS.get(pred_str, pred)}**")
+                st.subheader(f"✨ Similar verbs for **{display_label}**")
                 display_verbs_table(similar_verbs, cols=3)
 
             cursor.execute("""
@@ -301,6 +302,7 @@ elif choice == "Bloom’s Taxonomy Level":
             st.session_state.level_page = "evaluate"
         if col6.button("Create (C6)", key="create"):
             st.session_state.level_page = "create"
+
 
 
 
