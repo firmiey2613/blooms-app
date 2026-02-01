@@ -194,14 +194,14 @@ if username:
 else:
     user_id = None
 
-menu = ["Predict Question", "Check / Submit Word", "Bloom’s Taxonomy Level"]
+menu = ["Classify Question", "Check / Submit Word", "Bloom’s Taxonomy Level"]
 choice = st.sidebar.selectbox("Select Mode", menu)
 
 # --------------------------------------------------
-# MODE 1: Predict Question
+# MODE 1: Classify Question
 # --------------------------------------------------
-if choice == "Predict Question":
-    st.header("🔍 Predict Bloom Level for a Question")
+if choice == "Classify Question":
+    st.header("🔍 Classify Bloom Level for a Question")
     question = st.text_area("Enter the full question:")
 
     if st.button("Predict"):
@@ -308,6 +308,7 @@ elif choice == "Bloom’s Taxonomy Level":
             st.session_state.level_page = "evaluate"
         if col6.button("Create (C6)", key="create"):
             st.session_state.level_page = "create"
+
 
 
 
