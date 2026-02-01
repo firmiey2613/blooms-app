@@ -204,7 +204,7 @@ if choice == "Classify Question":
     st.header("🔍 Classify Bloom Level for a Question")
     question = st.text_area("Enter the full question:")
 
-    if st.button("Predict"):
+    if st.button("Classify"):
         if question.strip():
             pred = predict_question(question)
             
@@ -308,6 +308,7 @@ elif choice == "Bloom’s Taxonomy Level":
             st.session_state.level_page = "evaluate"
         if col6.button("Create (C6)", key="create"):
             st.session_state.level_page = "create"
+
 
 
 
